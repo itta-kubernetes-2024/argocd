@@ -19,17 +19,17 @@ spec:
     replicas: 3
     selector:
         matchLabels:
-        app: my-app
+            app: my-app
     template:
         metadata:
-        labels:
-            app: my-app
+            labels:
+                app: my-app
         spec:
-        containers:
-          - name: my-app
-            image: nginx:latest
-            ports:
-            - containerPort: 80
+            containers:
+              - name: my-app
+                image: nginx:latest
+                ports:
+                - containerPort: 80
 ```
 
 Appliquez le fichier YAML sur votre cluster Kubernetes :
@@ -48,6 +48,70 @@ Validez que les pods ont bien été créés :
 
 ```bash
 kubectl get pods
+```
+
+## Exposer le déploiement
+
+### Exposer le déploiement avec un service de type `LoadBalancer`
+
+Créez un fichier `service.yaml` avec le contenu suivant :
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app
+spec:
+    selector:
+        app: my-app
+    ports:
+    - protocol: TCP
+      port: 8090
+      targetPort: 80
+    type: LoadBalancer
+```
+
+Appliquez le fichier YAML sur votre cluster Kubernetes :
+
+```bash
+kubectl apply -f service.yaml
+```
+
+Naviguez vers l'adresse IP du serveur avec 8090 pour accéder à l'application.
+
+### Exposer le déploiement avec un ingress
+
+Créer un fichier `ingress.yaml` avec le contenu suivant :
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-app
+spec:
+    rules:
+    - host: my-app.local
+      http:
+        paths:
+         - path: /
+           pathType: Prefix
+           backend:
+             service:
+               name: my-app
+               port:
+                 number: 8090
+```
+
+Appliquez le fichier YAML sur votre cluster Kubernetes :
+
+```bash
+kubectl apply -f ingress.yaml
+```
+
+Testez l'accès à l'application à l'aide de la commande `curl` :
+
+```bash
+curl -H "Host: my-app.local" http://<IP-ADDRESS>
 ```
 
 ## Mettre à l'échelle le déploiement
@@ -70,6 +134,8 @@ Pour supprimer le déploiement :
 
 ```bash
 kubectl delete deployment my-app
+kubectl delete service my-app
+kubectl delete ingress my-app
 ```
 
 ## Déploiement de l'application avec ArgoCD
@@ -96,7 +162,11 @@ Créez un port-forward pour accéder à l'interface web :
 kubectl port-forward svc/argocd-server -n argocd 8080:443
 ```
 
-Accédez à l'interface web à l'adresse `https://localhost:8080` avec le login `admin` et le mot de passe `admin`.
+Accédez à l'interface web à l'adresse `https://localhost:8080` avec le login `admin` et le mot de passe est dans la commande suivante :
+
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d && echo
+```
 
 ### Préparez le déploiement dans le repository Git
 
@@ -124,18 +194,18 @@ metadata:
 spec:
     replicas: 3
     selector:
-        matchLabels:
-        app: my-app
+       matchLabels:
+          app: my-app
     template:
         metadata:
         labels:
             app: my-app
         spec:
-        containers:
-          - name: my-app
-            image: nginx:latest
-            ports:
-            - containerPort: 80
+            containers:
+            - name: my-app
+              image: nginx:latest
+              ports:
+                - containerPort: 80
 ```
 
 Créez un fichier `service.yaml` avec le contenu suivant :
@@ -150,8 +220,8 @@ spec:
         app: my-app
     ports:
     - protocol: TCP
-        port: 80
-        targetPort: 80
+      port: 8099
+      targetPort: 80
     type: LoadBalancer
 ```
 
@@ -165,50 +235,16 @@ git push
 
 ### Déploiement de l'application
 
-Créez un projet `default` :
+Dans l'interface web d'ArgoCD, cliquez sur `New App` et remplissez les champs suivants :
 
-```bash
-kubectl apply -f - <<EOF
-apiVersion: argoproj.io/v1alpha1
-kind: AppProject
-metadata:
-  name: default
-spec:
-    destinations:
-    - namespace: '*'
-        server: '*'
-    sourceRepos:
-    - '*'
-EOF
-```
+- Application Name: `my-app`
+- Project: `default`
+- Sync Policy: `Automatic`
+- Repository URL: `https://github.com/itta-kubernetes-2024/argocd.git`
+- Path: `my-app-<votre-nom>`
+- Cluster: `in-cluster`
 
-Créez un fichier `my-app.yaml` avec le contenu suivant :
-
-```yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: my-app
-spec:
-    destination:
-        server: 'https://kubernetes.default.svc'
-        namespace: default
-    project: default
-    source:
-        repoURL: 'https://github.com/itta-kubernetes-2024/argocd.git'
-    targetRevision: HEAD
-    path: my-app
-    syncPolicy:
-        automated:
-            prune: true
-            selfHeal: true
-```
-
-Appliquez le fichier `my-app.yaml` :
-
-```bash
-kubectl apply -f my-app.yaml
-```
+Cliquez sur `Create`.
 
 Validez que l'application a bien été créée :
 
