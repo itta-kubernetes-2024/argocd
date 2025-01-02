@@ -103,7 +103,7 @@ Accédez à l'interface web à l'adresse `https://localhost:8080` avec le login 
 Clonez le repository Git :
 
 ```bash
-git clone https://github.com/itta-kubernetes-2024/argocd.git
+git clone git@github.com:itta-kubernetes-2024/argocd.git
 ```
 
 Créez un dossier `my-app-<votre-nom>` :
