@@ -239,6 +239,7 @@ Dans l'interface web d'ArgoCD, cliquez sur `New App` et remplissez les champs su
 
 - Application Name: `my-app`
 - Project: `default`
+- Namespace: `default`
 - Sync Policy: `Automatic`
 - Repository URL: `https://github.com/itta-kubernetes-2024/argocd.git`
 - Path: `my-app-<votre-nom>`
